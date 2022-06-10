@@ -1,0 +1,33 @@
+name: Update LDraw
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # run at 2 AM UTC
+
+jobs:
+  update:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: 'ldraw'
+        fetch-depth: 0
+
+    - name: check for updates
+      run: |
+        cd ldraw
+        curl --etag-compare etag --etag-save etag 'https://www.ldraw.org/library/updates/complete.zip' -o complete.zip
+      shell: bash
+
+    - name: commit changes
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add -u ldraw/etag ldraw/complete.zip
+        git status
+        if [ -n "$(git status --porcelain)" ]; then
+          git commit --amend -m "LDraw update on $(date)"
+          git push --force origin HEAD:ldraw
+        fi
+      shell: bash
