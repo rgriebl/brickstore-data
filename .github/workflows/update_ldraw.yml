@@ -14,17 +14,28 @@ jobs:
         ref: 'ldraw'
         fetch-depth: 0
 
-    - name: check for updates
+    - name: Checkout BrickStore
       run: |
-        cd ldraw
-        curl --etag-compare etag --etag-save etag 'https://www.ldraw.org/library/updates/complete.zip' -o complete.zip
+        echo -n "Downloading latest script and mappings..."
+        mkdir -p ldraw-temp
+        cd ldraw-temp
+        git clone --depth 1 --filter=blob:none --sparse https://github.com/rgriebl/brickstore.git
+        cd brickstore
+        git sparse-checkout set --no-cone /ldraw
+        cd ..
+        cd ..
+        echo "done"
       shell: bash
 
-    - name: commit changes
+    - name: Update Mappings
+      run: |
+        ./ldraw-temp/brickstore/ldraw/create-bricklink-ldraw-id-mappings.py -t ldraw-temp -a ldraw-temp/brickstore/ldraw/mappings -o ldra
+
+    - name: Commiting changes
       run: |
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git add -u ldraw/etag ldraw/complete.zip
+        git add ldraw/complete.zip
         git status
         if [ -n "$(git status --porcelain)" ]; then
           git commit --amend -m "LDraw update on $(date)"
